@@ -1,184 +1,216 @@
-## EXP 3 B : IIR CHEBYSHEV FITER DESIGN
+# 4-A Design of FIR Filters using Rectangular Window
 
-### AIM: 
- To design an IIR Butterworth filter using bilinear transformation in SCILAB. 
+
+### AIM:        
+  To generate design of FIR digital filter using rectangular window in SCILAB .  
 
 ### APPARATUS REQUIRED: 
-PC installed with SCILAB. 
+  PC Installed with SCILAB 
 
-### PROGRAM (LPF): 
+### PROGRAM 
+#### a. Design of Low Pass FIR Digital filter
 ```python
 clc;
-clear;
 close;
 
-//  INPUTS 
-wp = input('Passband digital frequency (radians) = ');
-ws = input('Stopband digital frequency (radians) = ');
-alphap = input('Passband attenuation (Linear) = ');
-alphas = input('Stopband attenuation (Linear) = ');
-T = input('Sampling time = ');
+M = input('Enter the Odd Filter Length = ');
+Wc = input('Enter the Digital Cut off frequency = ');
 
-//  PREWARPING 
-omegap = (2/T)*tan(wp/2);
-disp("Prewarped passband frequency omegap = " + string(omegap));
+alpha = (M-1)/2; // Center value
 
-omegas = (2/T)*tan(ws/2);
-disp("Prewarped stopband frequency omegas = " + string(omegas));
-
-// RIPPLE FACTOR 
-epsilon = sqrt(10^(alphap/10) - 1);
-disp("Ripple factor epsilon = " + string(epsilon));
-
-//  FILTER ORDER 
-N_exact = acosh( sqrt((10^(alphas/10)-1)/(10^(alphap/10)-1)) )/ acosh(omegas/omegap);
-
-N = ceil(N_exact);
-disp("Rounded filter order N = " + string(N));
-
-// NORMALIZED POLES (Ωc = 1) 
-beta = (1/N) * asinh(1/epsilon);
-pols_norm = [];
-
-for k = 1:N
-    
-    theta = %pi*(2*k-1)/(2*N);
-    
-    sigma = -sinh(beta)*sin(theta);
-    omega = cosh(beta)*cos(theta);
-    
-    pol_norm = sigma + %i*omega;
-    pols_norm = [pols_norm pol_norm];
+for n = 1:M
+    if (n == alpha+1) then
+        hd(n) = Wc/%pi;
+    else
+        hd(n) = sin(Wc*((n-1)-alpha))/(((n-1)-alpha)*%pi);
+    end
 end
 
-disp("Normalized poles = ");
-disp(pols_norm);
+// Rectangular Window
+for n = 1:M
+    W(n) = 1;
+end
 
-//  NORMALIZED TRANSFER FUNCTION 
-s = poly(0,'s');
+// Windowing filter coefficients
+h = hd .* W;
 
-den_norm = real(poly(pols_norm,'s'));
-num_norm = real(prod(-pols_norm));
+disp("Filter Coefficients:");
+disp(h);
 
-Hn = num_norm / den_norm;
+[hzm,fr] = frmag(h,256);
 
-disp("Normalized Transfer Function Hn(s) (Ωc=1) = ");
-disp(Hn);
+subplot(2,1,1)
+plot(2*fr,hzm)
+xlabel('Normalized Digital Frequency w');
+ylabel('Magnitude');
+title('Frequency Response of FIR LPF using Rectangular Window');
 
-//  UNNORMALIZED (SCALED) POLES 
-omegac = omegap;   // Chebyshev Type-I
+hzm_dB = 20*log10(hzm);
 
-pols = omegac * pols_norm;   // scale poles directly
-
-disp("Scaled Analog poles = ");
-disp(pols);
-
-//  UNNORMALIZED TRANSFER FUNCTION
-den_s = real(poly(pols,'s'));
-num_s = real(prod(-pols));
-
-Hs = num_s / den_s;
-
-disp("Unnormalized Analog Transfer Function H(s) = ");
-disp(Hs);
-
-//  BILINEAR TRANSFORMATION 
-z = poly(0,'z');
-
-Hz = horner(Hs, (2/T)*((z-1)/(z+1)));
-
-disp("Digital Transfer Function H(z) = ");
-disp(Hz);
-
-//  FREQUENCY RESPONSE 
-HW = frmag(Hz,512);
-w = 0:%pi/511:%pi;
-
-plot(w/%pi, abs(HW));
-xlabel("Normalized Digital Frequency (×π rad/sample)");
-ylabel("Magnitude");
-title("Frequency Response of Chebyshev Type-I IIR LPF");
+subplot(2,1,2)
+plot(2*fr,hzm_dB)
+xlabel('Normalized Digital Frequency w');
+ylabel('Magnitude in dB');
+title('Frequency Response of FIR LPF using Rectangular Window');
 
 ```
-
-
-### PROGRAM (HPF): 
+#### b. Design of High Pass FIR Digital filter
 ```python
-lc;
+clc;
 close;
 
-// User Inputs
-wp = input('Pass band frequency (Radians)= ');  // Passband edge > Stopband edge
-ws = input('Stop band frequency (Radians)= ');
-alphap = input('Pass band attenuation (dB)= ');
-alphas = input('Stop band attenuation (dB)= ');
-T = input('Sampling Time= ');
+M = input('Enter the Odd Filter Length = ');
+Wc = input('Enter the Digital Cut off frequency = ');
 
-// Pre-warping (Bilinear Transformation)
-omegap = (2/T)*tan(wp/2);   // Passband edge (analog)
-disp(omegap,'omegap=');
-omegas = (2/T)*tan(ws/2);   // Stopband edge (analog)
-disp(omegas,'omegas=');
+alpha = (M-1)/2;
 
-// Order of the HPF
-N = acosh(sqrt(((10^(0.1*alphas))-1)/((10^(0.1*alphap))-1))) / acosh(omegap/omegas);
-disp(N,'N=');
-N = ceil(N);
-disp('Round off value of N=',N);
+for n = 1:M
+    if (n == alpha+1) then
+        hd(n) = 1 - (Wc/%pi);
+    else
+        hd(n) = -sin(Wc*((n-1)-alpha))/(((n-1)-alpha)*%pi);
+    end
+end
 
-// Cutoff frequency
-omegac = omegap / (((10^(0.1*alphap))-1)^(1/(2*N)));
-disp('omegac=',omegac);
+// Rectangular Window
+for n = 1:M
+    W(n) = 1;
+end
 
+h = hd .* W;
 
-// Chebyshev Prototype (Normalized LPF)
-Epsilon = sqrt((10^(0.1*alphap))-1);
-disp('Epsilon=',Epsilon);
+disp("Filter Coefficients:");
+disp(h);
 
-[pols, gn] = zpch1(N, Epsilon, 1);   // normalized LPF prototype at 1 rad/s
-disp('Gain',gn);
-disp('Poles',pols);
+[hzm,fr] = frmag(h,256);
 
-s = poly(0,'s');   // Laplace variable
-hs = poly(gn,'s','coeff') / real(poly(pols,'s'));
-disp('Analog Normalized Chebyshev LPF',hs);
-
-
-// LPF → HPF Transformation (s -> omegac/s)
-
-sh = horner(hs, omegac/s);
-disp('Analog Chebyshev High-Pass Filter',sh);
-
-
-// Bilinear Transformation: s -> (2/T)*((z-1)/(z+1))
-z = poly(0,'z');   // z-domain variable
-Hz = horner(sh, (2/T) * ((z-1)/(z+1)));
-disp('Digital HPF Transfer function H(Z)=',Hz);
-
-// Frequency Response
-HW = frmag(Hz, 512);
-w = 0:%pi/511:%pi;
-
-plot(w/%pi, abs(HW));
-xlabel('Normalized Digital Frequency ×π rad/sample');
+subplot(2,1,1)
+plot(2*fr,hzm)
+xlabel('Normalized Digital Frequency w');
 ylabel('Magnitude');
-title('Frequency Response of Chebyshev IIR High-Pass Filter');
+title('Frequency Response of FIR HPF using Rectangular Window');
+
+hzm_dB = 20*log10(hzm);
+
+subplot(2,1,2)
+plot(2*fr,hzm_dB)
+xlabel('Normalized Digital Frequency w');
+ylabel('Magnitude in dB');
+title('Frequency Response of FIR HPF using Rectangular Window');
 
 ```
+#### c. Design of Band Pass FIR Digital filter
+```python
+clc;
+close;
 
+M = input('Enter the Odd Filter Length = ');
+Wc1 = input('Enter the Lower Cut off frequency = ');
+Wc2 = input('Enter the Upper Cut off frequency = ');
 
-### OUTPUT (LPF) : 
+alpha = (M-1)/2;
 
-<img width="413" height="455" alt="image" src="https://github.com/user-attachments/assets/695921c0-7cd9-4ea5-999a-7c719036eea5" />
-<img width="419" height="455" alt="image" src="https://github.com/user-attachments/assets/185261d5-fa23-4273-b7e0-9fb0e20e9e35" />
+for n = 1:M
+    if (n == alpha+1) then
+        hd(n) = (Wc2 - Wc1)/%pi;
+    else
+        hd(n) = (sin(Wc2*((n-1)-alpha)) - sin(Wc1*((n-1)-alpha)))/(((n-1)-alpha)*%pi);
+    end
+end
 
+// Rectangular Window
+for n = 1:M
+    W(n) = 1;
+end
 
+h = hd .* W;
 
-### OUTPUT (HPF) : 
-<img width="402" height="455" alt="image" src="https://github.com/user-attachments/assets/9a07374f-14f0-489e-94d1-f6d4b9939c94" />
+disp("Filter Coefficients:");
+disp(h);
 
-<img width="425" height="453" alt="image" src="https://github.com/user-attachments/assets/4f431c69-8a13-441e-850a-72b5774de5a2" />
+[hzm,fr] = frmag(h,256);
 
-### RESULT: 
-Thus , the IIR Chebyshev filter was designed successfully using bilinear transformation in SCILAB.
+subplot(2,1,1)
+plot(2*fr,hzm)
+xlabel('Normalized Digital Frequency w');
+ylabel('Magnitude');
+title('Frequency Response of FIR BPF using Rectangular Window');
 
+hzm_dB = 20*log10(hzm);
+
+subplot(2,1,2)
+plot(2*fr,hzm_dB)
+xlabel('Normalized Digital Frequency w');
+ylabel('Magnitude in dB');
+title('Frequency Response of FIR BPF using Rectangular Window');
+
+```
+#### d. Design of Band Stop FIR Digital filter
+```python
+clc ; 
+close ; 
+M=input('Enter the Odd Filter Length ='); 
+Wc1 = input('Enter the Lower Cut off frequency = ');
+Wc2 = input('Enter the Upper Cut off frequency = '); 
+alpha= (M -1)/2 // Center Value 
+for n = 1:M 
+    if (n ==alpha+1) 
+        hd(n) =1-((Wc2-Wc1)/%pi) ; 
+    else 
+        hd(n) =((sin(Wc1 *((n -1)-alpha)))-(sin(Wc2 *((n -1)-alpha))))/(((n -1)-alpha)*%pi); 
+    end 
+end 
+// Rectangular Window
+ 
+for n = 1:M 
+    W(n) =1; 
+end 
+//Windowing filter coefficients 
+
+h = hd.*W; 
+disp('Filter Coefficients are') 
+disp(h) 
+
+[hzm,fr]= frmag (h,256) ; 
+
+subplot(2 ,1 ,1) 
+plot(2*fr, hzm) 
+xlabel( ' Normalized Digital Frequency w'); 
+ylabel( 'Magnitude '); 
+title( ' Frequency Response of  FIR BSF using Rectangular Window ') 
+
+hzm_dB = 20* log10 (hzm); 
+
+subplot (2 ,1 ,2); 
+plot(2*fr , hzm_dB); 
+xlabel( ' Normalized Digital Frequency W' ); 
+ylabel( 'Magnitude in dB'); 
+title('Frequency Response of FIR BSF using Rectangular Window');
+
+```
+### OUTPUT
+#### a. Design of Low Pass FIR Digital filter
+<img width="384" height="406" alt="image" src="https://github.com/user-attachments/assets/611cb982-5f11-4ce6-8e7a-e34052a47bb2" />
+
+<img width="446" height="414" alt="image" src="https://github.com/user-attachments/assets/40c4fd09-85ee-46e3-a6da-fb1baddd4ca8" />
+
+#### b. Design of High Pass FIR Digital filter
+
+<img width="382" height="416" alt="image" src="https://github.com/user-attachments/assets/f09f4dfe-f284-431c-8d31-4a370f7fa7ef" />
+
+<img width="448" height="422" alt="image" src="https://github.com/user-attachments/assets/cde9c54f-ac8f-4647-88b1-f5d495da939b" />
+
+#### c. Design of Band Pass FIR Digital filter
+
+<img width="380" height="456" alt="image" src="https://github.com/user-attachments/assets/eaa3a8e4-a9c3-4169-bfe2-d7c3e913e5f5" />
+
+<img width="435" height="450" alt="image" src="https://github.com/user-attachments/assets/48449795-d5e8-415f-8b31-0c9991632afc" />
+
+#### d. Design of Band Stop FIR Digital filter
+
+<img width="386" height="467" alt="image" src="https://github.com/user-attachments/assets/325fc06a-72ff-446c-adb2-5b8724b62bf0" />
+
+<img width="443" height="469" alt="image" src="https://github.com/user-attachments/assets/17d205ad-c6d1-4476-9e00-c6a9ab371a1c" />
+
+### RESULT
+The FIR Filters were successfully designed using rectangular window Technique.
